@@ -1,0 +1,46 @@
+name: portable-release-actions-workflow
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+      
+permissions:
+  contents: write
+  
+jobs:
+  build:
+    name: Create Release
+    runs-on: windows-latest
+    env:
+      targetZip: autodesk-eagle-free-portable-${{ github.ref_name }}.zip
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: installer
+        shell: cmd
+        run: |
+          curl "https://trial2.autodesk.com/NET17SWDLD/2017/EGLPRM/ESD/Autodesk_EAGLE_9.6.2_English_Win_64bit.exe" -L --output installer.exe &&^
+          dir
+          
+      - shell: cmd
+        run: |
+          dir &&^
+          start "" /wait .\installer.exe /VERYSILENT /NORESTART /DIR=installation
+
+      - shell: cmd
+        run: xcopy /H /Y /C "eagle.exe.Portable.cmd" "installation"
+          
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          type: 'zip'
+          directory: "installation"
+          filename: "${{ env.targetZip }}"
+          
+      - name: Release prebuilt
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "installation/${{ env.targetZip }}"
+          allowUpdates: true
+          token: ${{ secrets.GITHUB_TOKEN }}
